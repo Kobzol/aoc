@@ -219,6 +219,8 @@ extern void tuned_STREAM_Triad(STREAM_TYPE scalar);
 extern int omp_get_num_threads();
 #endif
 
+// #define CHECK_CACHE
+
 void print_mem()
 {
     FILE *f = fopen("/proc/meminfo", "r");
@@ -430,29 +432,38 @@ int main()
         times[1][k] = mysecond() - times[1][k];
 
         times[2][k] = mysecond();
+#ifdef CHECK_CACHE
         cache_miss_start(fd);
+#endif
 #ifdef TUNED
         tuned_STREAM_Add();
 #else
 
 #pragma omp parallel for
         for (j=0; j<STREAM_ARRAY_SIZE; j++)
-            c[j] = a[j]+b[j];
+            c[j] = a[j] + b[j];
 #endif
         times[2][k] = mysecond() - times[2][k];
+#ifdef CHECK_CACHE
         printf("third: %lu\n", cache_miss_end(fd));
+#endif
 
         times[3][k] = mysecond();
+#ifdef CHECK_CACHE
         cache_miss_start(fd);
+#endif
 #ifdef TUNED
         tuned_STREAM_Triad(scalar);
 #else
 #pragma omp parallel for
-        for (j=0; j<STREAM_ARRAY_SIZE; j++)
-            a[j] = b[j]+scalar*c[j];
+        for (j=0; j<STREAM_ARRAY_SIZE; j
+        ++)
+            a[j] = b[j] + scalar * c[j];
 #endif
         times[3][k] = mysecond() - times[3][k];
+#ifdef CHECK_CACHE
         printf("fourth: %lu\n", cache_miss_end(fd));
+#endif
     }
 
     /*	--- SUMMARY --- */

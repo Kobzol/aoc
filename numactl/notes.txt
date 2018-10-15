@@ -22,7 +22,7 @@ numactl can also control policies for tmpfs, huge page FS and shared memory file
 2) stream.c
 
 3) Singlethread STREAMS test
-./stream                                    - 13 Gb/s (enough memory, same as local)
+./stream                                    - 13 Gb/s (enough memory, same as local), 19 Gb/s ICC Copy
 numactl -l ./stream                         - 13 Gb/s
 numactl --cpubind=0 --membind=0 ./stream    - 13 Gb/s
 numactl --cpubind=0 --membind=1 ./stream    - 10 Gb/s
@@ -37,7 +37,7 @@ OMP_NUM_THREADS=12 numactl --interleave=all ./stream                - 54.5 Gb/s
 OMP_NUM_THREADS=24 numactl ./stream                                 - 88 Gb/s
 OMP_NUM_THREADS=24 numactl --interleave=all ./stream                - 59 Gb/s
 
-ICC 24 threads - 100 Gb/s
+ICC 24 threads copy - 103 Gb/s
 
 Stuff:
 icc, gcc compile flags
@@ -53,7 +53,7 @@ cache size - getconf -a | grep CACHE
 page size - getpagesize()
 
 #pragma omp parallel for - schedule
-
+OMP_PROC_BIND, OMP_PLACES
 
 fourth faster than third - more L3 cache misses, reverse array direction
 - non-temporal access

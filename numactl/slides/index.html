@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>reveal.js</title>
+
+  <link rel="stylesheet" href="css/reveal.css">
+  <link rel="stylesheet" href="css/theme/black.css">
+
+  <!-- Theme used for syntax highlighting of code -->
+  <link rel="stylesheet" href="lib/css/zenburn.css">
+
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+    document.getElementsByTagName('head')[0].appendChild(link);
+  </script>
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section><h4>NUMA effect</h4></section>
+      <section>
+        Compiler options
+        <pre><code class="bash" data-trim>
+          # GCC 8.1
+          $ gcc -O3 -march=native -fopenmp streams.c -lnuma -o stream
+
+          # Intel compiler 2018.3
+          $ icc -O3 -march=native -qopenmp streams.c -lnuma -o stream
+        </code></pre>
+      </section>
+      <section>
+        Single threaded (Gb/s)
+        <table>
+          <tr><th>Command</th><th>Copy GCC</th><th>Copy ICC</th><th>Triad GCC</th><th>Triad ICC</th></tr>
+          <tr><td>./stream</td><td>11.6</td><td>18.9</td><td>12.5</td><td>12.7</td></tr>
+          <tr><td>numactl -l</td><td>11.6</td><td>18.9</td><td>12.5</td><td>12.7</td></tr>
+          <tr><td>numactl --cpubind=0 --membind=0</td><td>11.6</td><td>18.9</td><td>12.5</td><td>12.7</td></tr>
+          <tr><td>numactl --cpubind=0 --membind=1</td><td>8.9</td><td>11.8</td><td>9.6</td><td>9.8</td></tr>
+          <tr><td>numactl --interleave=all</td><td>10.2</td><td>15.1</td><td>11.4</td><td>11.5</td></tr>
+        </table>
+      </section>
+      <section>
+        <section>
+          How to check?
+          <pre class='fragment'><code class='cpp' data-trim>
+            // get NUMA node of page
+            move_pages(0, 1, &addr, NULL, &node, 0);
+
+            // get NUMA node of current thread
+            numa_node_of_cpu(sched_getcpu());
+          </code>
+          </pre>
+          <pre class='fragment'><code class="bash" data-trim>
+            $ numastat
+                                                 node0           node1
+            numa_hit              5926843663      6971552565
+            numa_miss               27077349         1705662
+            numa_foreign             1705662        27077349
+            interleave_hit           2501176         2501190
+            local_node            5925602884      6965325516
+            other_node              28318128         7932711
+          </code></pre>
+        </section>
+        <section>
+          <pre><code class="bash" data-trim data-noescape>
+            $ numastat > stats1.txt
+            $ ./stream
+            $ numastat > stats2.txt
+            $ diff stats1.txt stats2.txt
+            <span class='fragment'>
+            < local_node            5926865901      6966782363
+            ---
+            > local_node            5927482327      6966789151
+            # ~600k local_node hits
+            </span>
+          </code></pre>
+        </section>
+        <section>
+          <p>Why 600k?</p>
+          <pre><code class='cpp' data-trim data-noescape>
+            <span class='fragment'>Doubles per array: 100 * 1024 * 1024 (100 million)</span>
+            <span class='fragment'>Array size: 100 MiB * 8 = 800 MiB</span>
+            <span class='fragment'>Total arrays size: 800 MiB * 3 = 2.4 GiB</span>
+            <span class='fragment'>Page count: 2.4 GiB / 4KiB = 600k</span>
+            <span class='fragment'>getpagesize() // get configured page size, usually 4k or 2MiB</span>
+          </code></pre>
+        </section>
+        <section>
+          When does allocation happen? (first-touch policy)
+          <pre><code class='cpp' data-trim data-noescape>
+            <span class='fragment'>// cat /proc/mem/info - 100 MiB used memory</span>
+            <span class='fragment'>int* mem = (int*) malloc(1024 * 1024 * 1024); // allocate 1 GiB</span>
+            <span class='fragment'>// cat /proc/mem/info - 100 MiB used memory</span>
+            <span class='fragment'>mem[0] = 5;        // first page is allocated</span>
+            <span class='fragment'>*(mem + 1024) = 5; // second page is allocated</span>
+          </code></pre>
+        </section>
+      </section>
+      <section>
+        <section>
+          <pre><code class='cpp' data-trim data-noescape>
+            // ADD
+            for (int j=0; j&lt;STREAM_ARRAY_SIZE; j++)
+              c[j] = a[j] + b[j];
+
+            <span class='fragment'>
+            // this has consistently ~same speed as ADD
+            for (int j=0; j&lt;STREAM_ARRAY_SIZE; j++)
+              a[j] = b[j] + scalar * c[j];
+            </span>
+            <span class='fragment'>
+            // but this is slower
+            for (int j=0; j&lt;STREAM_ARRAY_SIZE; j++)
+              a[j] = b[j] + scalar + c[j];
+            </span>
+          </code></pre>
+        </section>
+        <section>
+          Dissasembly binary (FMA instruction)
+          <pre><code class='bash' data-trim data-noescape>
+            $ gcc ... -g
+            $ objdump -S -l
+            <span class='fragment'>
+            a[j] = b[j]+scalar*c[j];
+            401ef6:	c4 c2 f1 a9 04 c3    	vfmadd213sd (%r11,%rax,8),%xmm1,%xmm0
+            </span>
+          </code></pre>
+        </section>
+      </section>
+      <section>
+        Multithreaded (12 threads, Gb/s)
+        <table>
+          <tr><th>Command</th><th>Copy GCC</th><th>Copy ICC</th><th>Triad GCC</th><th>Triad ICC</th></tr>
+          <tr><td>./stream</td><td>39.5</td><td>90.6</td><td>12.5</td><td>44.1</td></tr>
+          <tr><td>numactl -l</td><td>46.2</td><td>90.2</td><td>12.5</td><td>51.5</td></tr>
+          <tr><td>numactl --cpubind=0 --membind=0</td><td>38.9</td><td>52.6</td><td>44.4</td><td>44.5</td></tr>
+          <tr><td>numactl --cpubind=0 --membind=1</td><td>16.2</td><td>18.1</td><td>17.6</td><td>17.6</td></tr>
+          <tr><td>numactl --cpubind=0 --interleave=all</td><td>31.2</td><td>36.8</td><td>33.6</td><td>33.6</td></tr>
+          <tr><td>numactl --interleave=all</td><td>49.9</td><td>60.7</td><td>55.6</td><td>55.5</td></tr>
+        </table>
+      </section>
+      <section>
+        Multithreaded (24 threads, Gb/s)
+        <table>
+          <tr><th>Command</th><th>Copy GCC</th><th>Copy ICC</th><th>Triad GCC</th><th>Triad ICC</th></tr>
+          <tr><td>./stream</td><td>77.8</td><td>104.5</td><td>88.8</td><td>87.8</td></tr>
+          <tr><td>numactl -l</td><td>77.8</td><td>103.6</td><td>88.8</td><td>88.1</td></tr>
+          <tr><td>numactl --interleave=all</td><td>53.4</td><td>64.9</td><td>59.0</td><td>59.0</td></tr>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <script src="lib/js/head.min.js"></script>
+  <script src="js/reveal.js"></script>
+
+  <script>
+    // More info about config & dependencies:
+    // - https://github.com/hakimel/reveal.js#configuration
+    // - https://github.com/hakimel/reveal.js#dependencies
+    Reveal.initialize({
+      width: 1080,
+      height: 780,
+      dependencies: [
+        { src: 'plugin/markdown/marked.js' },
+        { src: 'plugin/markdown/markdown.js' },
+        { src: 'plugin/notes/notes.js', async: true },
+        { src: 'plugin/highlight/highlight.js', async: true, callback: function () { hljs.initHighlightingOnLoad(); } }
+      ]
+    });
+    Reveal.addEventListener("fragmentshown", function (event) {
+      var span = event.fragment;
+      if (span.dataset.state === "strikethrough") {
+        var strike = span.parentNode.querySelector(".strikethrough");
+        strike.style.textDecoration = "line-through";
+      }
+    });
+  </script>
+</body>
+
+</html>
