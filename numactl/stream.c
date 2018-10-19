@@ -487,7 +487,9 @@ int main()
                avgtime[j],
                mintime[j],
                maxtime[j]);
+        fprintf(stderr, "%f\n", 1.0E-06 * bytes[j]/mintime[j]);
     }
+    fflush(stderr);
     printf(HLINE);
 
     /* --- Check Results --- */
