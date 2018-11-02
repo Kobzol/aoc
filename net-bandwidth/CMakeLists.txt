@@ -1,4 +1,4 @@
-find_package(MPI REQUIRED)
+find_package(MPI)
 
 set(CMAKE_CXX_STANDARD 14)
 
