@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>reveal.js</title>
+
+  <link rel="stylesheet" href="css/reveal.css">
+  <link rel="stylesheet" href="css/theme/black.css">
+
+  <!-- Theme used for syntax highlighting of code -->
+  <link rel="stylesheet" href="lib/css/zenburn.css">
+
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+    document.getElementsByTagName('head')[0].appendChild(link);
+  </script>
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section>
+        <h4>Cache implementation</h4>
+      </section>
+      <section>
+        <h4>What is a cache?</h4>
+        <ul>
+          <li class="fragment">N-way associative hash table</li>
+          <li class="fragment">Holds cache lines (usually 64 bytes)</li>
+          <li class="fragment">Implemented with Static RAM</li>
+        </ul>
+        <p class="fragment">Latencies</p>
+        <ul>
+          <li class="fragment">L1 ~ 1 ns</li>
+          <li class="fragment">L2 ~ 7 ns</li>
+          <li class="fragment">L3 ~ 40 ns</li>
+          <li class="fragment">Main memory ~ 100 ns</li>
+          <li class="fragment">Far NUMA memory ~ 300 ns</li>
+        </ul>
+        <!-- http://norvig.com/21-days.html#answers -->
+      </section>
+      <section>
+        <section>
+          <h4>1-way associative (direct mapped)</h4>
+          <img class="stretch" src="img/direct-mapped.png" />
+          <ul>
+            <li>Easy implementation</li>
+            <li>Lower hit rate</li>
+          </ul>
+        </section>
+        <section>
+          <h4>N-way associative (fully associative)</h4>
+          <img class="stretch" src="img/n-way.png" />
+          <ul>
+            <li>Cache is fully utilized, higher hit rate</li>
+            <li>Uses eviction heuristics</li>
+            <li>Slow and complicated implementation</li>
+          </ul>
+        </section>
+        <section>
+          <h4>2-way associative (direct mapped)</h4>
+          <img class="stretch" src="img/2-way.png" />
+          <ul>
+            <li>Tradeoff between 1-way and N-way</li>
+            <li>Cache is not utilized fully</li>
+            <li>Uses eviction heuristics</li>
+          </ul>
+        </section>
+        <section>
+          <h4>4-way associative</h4>
+          <img class="stretch" src="img/4-way.png" />
+        </section>
+      </section>
+      <section>
+        <h4>Addressing</h4>
+        <img src="img/address.png" />
+        <ul>
+          <li class="fragment">Offset - position of byte in cache line (6 bits)</li>
+          <li class="fragment">Index - position of cache line in cache</li>
+          <li class="fragment">Tag - used to compare lines in a bucket</li>
+        </ul>
+        <ul>
+          <li class="fragment">Usually virtually indexed, physically tagged</li>
+          <li class="fragment">Fast lookup - concurrent TLB check and indexing</li>
+        </ul>
+      </section>
+      <section>
+        <section>
+          <h4>Coherency</h4>
+          <ul>
+            <li class="fragment">In SMP systems cores check each other's caches</li>
+            <li class="fragment">Coherency protocol &amp; bus locking is required</li>
+            <li class="fragment">Executes on the granularity of cache lines</li>
+            <li class="fragment">Affects the processor's memory model (weak, strong, sequentially consistent)</li>
+          </ul>
+        </section>
+        <section>
+          <h4>MESI protocol</h4>
+          <ul>
+            <li class="fragment">M (modified) - only in one cache, dirty</li>
+            <li class="fragment">E (exclusive) - only in one cache, clean</li>
+            <li class="fragment">S (shared) - may be in more caches, clean</li>
+            <li class="fragment">I (invalid) - unused</li>
+          </ul>
+        </section>
+      </section>
+      <section>
+        <h4>Inclusivity</h4>
+        <ul>
+          <li class="fragment">Inclusive</li>
+          <ul>
+            <li class="fragment">line has to be in all lower levels</li>
+            <li class="fragment">eviction from a level must also evict from all lower levels</li>
+            <li class="fragment">simplifies line existence check (just check the lower level)</li>
+          </ul>
+          <li class="fragment">Exclusive</li>
+          <ul>
+            <li class="fragment">cache line at most in one cache level</li>
+            <li class="fragment">after a hit the line is swapped with lower level line</li>
+          </ul>
+        </ul>
+      </section>
+      <section>
+        <h4>Write policy</h4>
+        <ul>
+          <li class="fragment">Write-through</li>
+          <ul>
+            <li class="fragment">Write to cache and memory synchronously</li>
+          </ul>
+          <li class="fragment">Write-back</li>
+          <ul>
+            <li class="fragment">Write to cache, memory is written on eviction</li>
+            <li class="fragment">Typically used in x86 processors</li>
+          </ul>
+          <li class="fragment">Write allocate</li>
+          <ul>
+            <li class="fragment">On write miss, data is first loaded to cache</li>
+          </ul>
+          <li class="fragment">No-write allocate</li>
+          <ul>
+            <li class="fragment">On write miss, data is written directly to memory</li>
+            <li class="fragment">Can be forced (SSE non-temporal store <b>MOVNTI</b>)</li>
+          </ul>
+        </ul>
+      </section>
+      <section>
+        <h4>Real hardware</h4>
+        <ul>
+          <li class="fragment">Intel i7</li>
+          <ul>
+            <li class="fragment">L1 - 32 KiB, 8-way</li>
+            <li class="fragment">L2 - 256 KiB, 8-way</li>
+            <li class="fragment">L3 - 2 MiB per core, 16-way, inclusive</li>
+          </ul>
+          <li class="fragment">AMD RyZen ThreadRipper 1950x</li>
+          <ul>
+            <li class="fragment">L1 - 32 KiB, 8-way</li>
+            <li class="fragment">L2 - 512 KiB, 8-way</li>
+            <li class="fragment">L3 - 2 MiB per core, 16-way, exclusive?</li>
+          </ul>
+        </ul>
+      </section>
+      <section>
+        <h4>TLB (translation lookaside buffer)</h4>
+        <ul>
+          <li class="fragment">Hardware cache that stores virtual-to-physical page mappings</li>
+          <li class="fragment">TLB miss is super expensive - triggers a page table walk in OS</li>
+          <li class="fragment">Another reason for spatial &amp; temporal locality!</li>
+          <li class="fragment">May be flushed on (process) context switch</li>
+          <li class="fragment">Typical stats: hit ~1 clock, miss ~100 clocks, 4k entries</li>
+        </ul>
+      </section>
+      <section>
+        <h4>Other caches</h4>
+        <ul>
+          <li class="fragment">micro ops cache</li>
+          <li class="fragment">store buffers</li>
+          <li class="fragment">...</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script src="lib/js/head.min.js"></script>
+  <script src="js/reveal.js"></script>
+
+  <style>
+    .cache {
+      display: flex;
+      justify-content: center;
+    }
+    .cache div {
+      border: 1px solid white;
+    }
+  </style>
+  <script>
+    // More info about config & dependencies:
+    // - https://github.com/hakimel/reveal.js#configuration
+    // - https://github.com/hakimel/reveal.js#dependencies
+    Reveal.initialize({
+      width: 1080,
+      height: 780,
+      dependencies: [
+        { src: 'plugin/markdown/marked.js' },
+        { src: 'plugin/markdown/markdown.js' },
+        { src: 'plugin/notes/notes.js', async: true },
+        { src: 'plugin/highlight/highlight.js', async: true, callback: function () { hljs.initHighlightingOnLoad(); } }
+      ]
+    });
+    Reveal.addEventListener("fragmentshown", function (event) {
+      var span = event.fragment;
+      if (span.dataset.state === "strikethrough") {
+        var strike = span.parentNode.querySelector(".strikethrough");
+        strike.style.textDecoration = "line-through";
+      }
+    });
+  </script>
+</body>
+</html>
