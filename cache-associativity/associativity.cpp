@@ -24,7 +24,7 @@ void test_memory(const std::vector<int*>& memory)
         }
     }
 
-    std::cerr << std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - start).count() / size << std::endl;
+    std::cerr << std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - start).count() << std::endl;
     std::cout << "Sum: " << sum << std::endl;
 }
 

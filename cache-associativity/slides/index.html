@@ -185,6 +185,51 @@
           <li class="fragment">...</li>
         </ul>
       </section>
+      <section>
+        <section>
+          <h4>Forcing aliasing</h4>
+          <pre class="fragment"><code class="bash" data-trim data-noescape>
+            $ getconf -a | grep CACHE
+            LEVEL1_DCACHE_SIZE                 32768
+            LEVEL1_DCACHE_ASSOC                8
+            LEVEL1_DCACHE_LINESIZE             64
+            <span class="fragment"># standard scheme used by Intel, matches 4k pages</span>
+          </code></pre>
+            <pre class="fragment"><code class="python" data-trim data-noescape>
+            <span class="fragment">size = 32768</span>
+            <span class="fragment">line_size = 64</span>
+            <span class="fragment">assoc = 8</span>
+            <span class="fragment">slots = size / line_size     # 512</span>
+            <span class="fragment">buckets = slots / assoc      # 64</span>
+            <span class="fragment">index_bits = log2(buckets)   # 6</span>
+          </code></pre>
+        </section>
+        <section>
+          <p>
+            <span>1101001</span><span style="color: blue;">000000</span><span style="color: red;">000000</span>
+          </p>
+          <span class="fragment">Tag</span>
+          <span class="fragment" style="color: blue;">Index</span>
+          <span class="fragment" style="color: red;">Offset</span>
+          <p class="fragment">Addresses sharing the same bucket:</p>
+          <ul>
+            <li class="fragment">0xFF0000</li>
+            <li class="fragment">0xFF1000</li>
+            <li class="fragment">0xFF2000</li>
+            <li class="fragment">0xFF3000</li>
+            <li class="fragment">...</li>
+          </ul>
+        </section>
+        <section style="top: 0px;">
+          <div style="display: flex; justify-content: center; align-items: center;">
+            <img class="fragment step-fade-in-then-out" src="img/0-1.svg" />
+            <img class="fragment step-fade-in-then-out" src="img/0-2.svg" />
+            <img class="fragment step-fade-in-then-out" src="img/0-3.svg" />
+            <img class="fragment step-fade-in-then-out" src="img/0-4.svg" />
+            <img class="fragment step-fade-in-then-out" src="img/0-5.svg" />
+          </div>
+        </section>
+      </section>
     </div>
   </div>
 
