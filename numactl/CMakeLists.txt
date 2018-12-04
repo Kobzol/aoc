@@ -8,5 +8,12 @@ endif()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 add_executable(simple-alloc simple-alloc.cpp)
+
+find_package(NUMA QUIET)
+
 add_executable(stream stream.c)
-target_link_libraries(stream numa)
+
+if (NUMA_FOUND)
+    add_definitions(-DUSE_NUMA)
+    target_link_libraries(stream numa)
+endif()

@@ -47,8 +47,10 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <malloc.h>
+#ifdef USE_NUMA
 #include <numaif.h>
 #include <numa.h>
+#endif
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <sched.h>
@@ -228,6 +230,7 @@ void print_mem()
     fread(buf, 1, sizeof(buf), f);
     printf("%s\n", buf);
 }
+#ifdef USE_NUMA
 int get_numa_node_page(void* addr)
 {
     int status;
@@ -251,6 +254,7 @@ int get_numa_node_thread()
     int cpu = sched_getcpu();
     return numa_node_of_cpu(cpu);
 }
+#endif
 long sys_perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
                          int cpu, int group_fd, unsigned long flags)
 {
