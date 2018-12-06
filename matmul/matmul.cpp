@@ -70,9 +70,9 @@ static void assertMatrix(const Type* a, const Type* b, const Type* c, size_t siz
 
     for (size_t i = 0; i < size * size; i++)
     {
-        if (std::fabs(res[i] - c[i]) > 0.0001)
+        if (std::abs(res[i] - c[i]) > 0.0001)
         {
-            std::cerr << "Wrong result: expected " << res[i] << ", got " << c[i] << " (" << std::fabs(res[i] - c[i]) << ")" << std::endl;
+            std::cerr << "Wrong result: expected " << res[i] << ", got " << c[i] << " (" << std::abs(res[i] - c[i]) << ")" << std::endl;
             std::cerr << "Index: " << i << " (" << (i / size) << ", " << (i % size) << ")" << std::endl;
             std::exit(1);
         }
