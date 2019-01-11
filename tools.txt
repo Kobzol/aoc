@@ -1,0 +1,8 @@
+IDB - Intel debugger
+SDE - simulated development environment
+Intel Amplifier
+Intel Inspector
+Intel Advisor
+Allinea Forge
+Allinea Performance reports
+perf

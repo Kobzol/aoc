@@ -16,7 +16,7 @@ using BenchFn = void(*)(const Type*, const Type*, Type*, size_t);
 
 #define ELEMS_PER_CACHE_LINE (64 / sizeof(Type))
 
-#define BENCH_DEFINE(Name) BENCHMARK(Name)->Unit(UNIT)->RangeMultiplier(2)->Range(512, 1024)
+#define BENCH_DEFINE(Name) BENCHMARK(Name)->Unit(UNIT)->RangeMultiplier(2)->Range(1024, 1024)
 
 #define BENCH(Fn, transpose) static void Bench##Fn(benchmark::State& state) \
 { \

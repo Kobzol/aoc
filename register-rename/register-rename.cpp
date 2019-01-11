@@ -3,6 +3,8 @@
 #include <chrono>
 #include <benchmark/benchmark.h>
 
+static auto UNIT = benchmark::kNanosecond;
+
 #define SIZE 2048
 
 #define BENCH(Fn) \
@@ -22,8 +24,6 @@ static void Bench##Fn(benchmark::State& state) \
 } \
 BENCHMARK(Bench##Fn)->Unit(UNIT)->RangeMultiplier(2)->Range(SIZE, SIZE);
 
-static auto UNIT = benchmark::kNanosecond;
-
 
 extern "C" {
     size_t loop_basic(size_t* a, size_t* b, size_t count);
@@ -36,3 +36,5 @@ BENCH(loop_unrolled);
 BENCH(loop_unrolled_rax);
 
 BENCHMARK_MAIN();
+
+// matrix transposition tiled
