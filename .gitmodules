@@ -1,0 +1,3 @@
+[submodule "vtune/routing-algorithms"]
+	path = vtune/routing-algorithms
+	url = https://code.it4i.cz/routing/StaticRoutingCPP.git
